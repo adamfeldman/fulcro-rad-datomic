@@ -1,5 +1,10 @@
 = Datomic Database Plugin
 
+This library is may have out-of-date documentation. See the current version of the https://github.com/fulcrologic/fulcro-rad-demo[Fulcro RAD Demo] 
+for an accurate representation of usage.
+
+Paid support can be obtained from http://www.fulcrologic.com[Fulcrologic, LLC].
+
 image:https://img.shields.io/clojars/v/com.fulcrologic/fulcro-rad-datomic.svg[link=https://clojars.org/com.fulcrologic/fulcro-rad-datomic]
 
 Current SNAPSHOT CI status:
@@ -10,7 +15,7 @@ image:https://circleci.com/gh/fulcrologic/fulcro-rad-datomic/tree/master.svg?sty
 
 This is a plugin for Fulcro RAD that adds support for using Datomic databases as the back-end technology.
 
-NOTE: The current version supports on-prem Datomic Pro (PostgreSQL or MySQL backends), Datomic Free, or Mem stores. Make sure
+NOTE: The current version supports on-prem Datomic Pro (PostgreSQL or MySQL backends), Datomic Free, or Mem stores, as well as Datomic Cloud. Make sure
 you do not accidentally get Datomic Free and Datomic Pro BOTH on the CLASSPATH. If you're using deps you should make
 sure you use something like:
 
@@ -20,8 +25,8 @@ sure you use something like:
                                             :exclusions  [com.datomic/datomic-free]}}}
 -----
 
-WARNING: This README may be out of date. See the fulcro-rad-demo project for an up-to-date usage of this
-library. The docs will be more reliably updated after alpha releases.
+WARNING: This README may be out of date.
+
 
 == Conventions
 
@@ -31,9 +36,12 @@ The following namespace aliases are used in the content of this document:
 -----
 (ns x
   (:require
-    [com.fulcrologic.rad.attributes :as attr]
-    [com.fulcrologic.rad.database-adapters.datomic :as datomic]))
+     [com.fulcrologic.rad.attributes :as attr]
+     [com.fulcrologic.rad.database-adapters.datomic :as datomic]
+; or [com.fulcrologic.rad.database-adapters.datomic-cloud :as datomic] for Datomic Cloud support
+     [com.fulcrologic.rad.database-adapters.datomic-options :as do]))
 -----
+
 
 == Schemas
 
@@ -46,7 +54,7 @@ during operation.
 === Attribute Facets
 
 Every attribute in the system that is stored in Datomic using this plugin *must* include
-a `::datomic/schema <k>` entry, where `<k>` is a keyword representing a schema name. All attributes
+a `::attr/schema <k>` entry, where `<k>` is a keyword representing a schema name. All attributes
 that share the same schema name will be stored together in a database that has that schema (see
 Selecting a Database During Operation).
 
@@ -57,13 +65,9 @@ override for uniqueness is supplied or the attribute is marked as an `::attr/ide
 `::attr/identity?`:: Causes the attribute to be a unique *identity*. If supplied, then `::attr/unique?` is
 assumed.
 `::attr/cardinality`:: `:one` or `:many` (or you can specify it with normal datomic keys).
-
-The plugin-specific attribute parameters are:
-
-`::datomic/schema keyword`:: (required) A name that groups together attributes that go together in a schema
+`::attr/schema keyword`:: (required) A name that groups together attributes that go together in a schema
 on a database. A schema can be used on any number of databased (e.g. for sharding).
-`::datomic/native-id?`:: If true it will map the given ID attribute (which must be type long) to `:db/id`.
-`::datomic/entity-ids #{k k2 ...}`:: Required on *non*-identity attributes.
+`::attr/identities #{k k2 ...}`:: Required on *non*-identity attributes.
 A set of attribute keys that are `:attr/identity? true`. This
 set indicates that the attribute can be *placed* on an entity that is identified by one of those identity attributes.
 This allows the Datomic plugin to figure out which properties can be co-located on an entity for storage
@@ -71,6 +75,12 @@ in form saves and queries in resolvers. It is a set in order to support the fact
 an attribute to appear on any entity, but your domain model will put it on a more limited subset of
 different entities. Failing to list this entry will result in failure to generate resolvers
 or form save logic for the attribute.
+
+The plugin-specific attribute parameters are:
+
+`do/native-id?`:: If true it will map the given ID attribute (which must be type long) to `:db/id`.
+`do/attribute-schema`:: A map of datomic schema attributes to be included in transacted schema.
+example:  {:db/isComponent true}
 
 *Any* of the normal Datomic schema definition attributes can be included as well (e.g. `:db/cardinality`), and
 will take precedence over anything above. Be careful when changing these, as the result can cause
@@ -173,7 +183,7 @@ it can also be used to generate a constant (well-known) UUID for testing.
 
 === A Sample Test
 
-The core function to use is `datomic/empty-db-connection`, which can work with
+If you are using on-prem, the core function to use is `datomic/empty-db-connection`, which can work with
 automatically-generated schema or a manual schema. It returns a Datomic connection
 which has the supplied schema (and is memoized for fast startup on sequences of tests).
 
@@ -195,6 +205,9 @@ A typical test might look like the following:
 
 NOTE: The connection is memoized based on the schema key (not any supplied migration data). You
 can use `(datomic/reset-test-schema k)` to forget the current memoized version.
+
+For Datomic Cloud, the current recommendation is to use the https://github.com/ComputeSoftware/dev-local-tu[dev-local-tu] library.
+See the https://github.com/fulcrologic/fulcro-rad-demo[fulcrologic/fulcro-rad-demo] for an example.
 
 == Resolver Generation
 
@@ -226,8 +239,20 @@ edit the `defaults.edn` file in `src/example/config` and update the database par
 ```
 
 
-== License and Copyright
+== LICENSE
 
-This library is Copyright 2020 by Fulcrologic, LLC. All rights reserved.
+The MIT License (MIT)
+Copyright (c), Fulcrologic, LLC
 
-Formal licensing of this library has yet to be determined.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
